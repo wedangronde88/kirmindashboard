@@ -13,7 +13,7 @@ return [
             /*
              * Path to the json file containing the credentials.
              */
-            'credentials_json' => storage_path('app/google-calendar/fullcalendaragain-81ee3f461742.json'),
+            'credentials_json' => storage_path('app/google-calendar/fullcalendaragain-1117c57d5ce4.json'),
         ],
 
         /*
@@ -35,7 +35,7 @@ return [
     /*
      *  The id of the Google Calendar that will be used by default.
      */
-    'calendar_id' => env('GOOGLE_CALENDAR_ID'),
+    'calendar_id' => env('072b45e79fe3d9cab79cbd68ddf1f589413f58366846b501f26a1d0096ecde5f@group.calendar.google.com'),
 
      /*
      *  The email address of the user account to impersonate.
