@@ -29,20 +29,27 @@ class TruckController extends Controller
     /**
      * Store a newly created truck in storage.
      */
-    public function store(TruckStoreRequest $request)
+    public function store(Request $request)
     {
-        $data = $request->validated();
+        $data = $request->validate([
+            'plat_no' => 'required|unique:trucks',
+            'brand_truk' => 'required',
+            'no_stnk' => 'required',
+            'no_kir' => 'required',
+            'no_pajak' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
 
         // Handle image upload
-        $imagePath = $data->file('image') ? $data->file('image')->store('trucks', 'public') : null;
+        $imagePath = $request->file('image') ? $request->file('image')->store('trucks', 'public') : null;
 
         // Create the truck
         Truck::create([
-            'plat_no' => $data->plat_no,
-            'brand_truk' => $data->brand_truk,
-            'no_stnk' => $data->no_stnk,
-            'no_kir' => $data->no_kir,
-            'no_pajak' => $data->no_pajak,
+                 'plat_no' => $data['plat_no'],
+                'brand_truk' => $data['brand_truk'],
+            'no_stnk' => $data['no_stnk'],
+            'no_kir' => $data['no_kir'],
+            'no_pajak' => $data['no_pajak'],
             'image' => $imagePath,
         ]);
 
@@ -60,23 +67,27 @@ class TruckController extends Controller
     /**
      * Update the specified truck in storage.
      */
-    public function update(TruckUpdateRequest $request, Truck $truck)
+    public function update(Request $request, Truck $truck)
     {
         
 
-        $data = $request->validated();
+       $data = $request->validate([
+            'plat_no' => 'required|unique:trucks',
+            'brand_truk' => 'required',
+            'no_stnk' => 'required',
+            'no_kir' => 'required',
+            'no_pajak' => 'required',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+        ]);
 
-        if ($data->hasFile('image')) {
-            if ($truck->image) {
-                Storage::disk('public')->delete($truck->image);
-            }
-
-            $imagePath = $data->file('image')->store('trucks', 'public');
-            $truck->image = $imagePath;
-        }
-
-        // Update the truck
-        $truck->fill($data);
+        if ($request->hasFile('image')) {
+    if ($truck->image) {
+        Storage::disk('public')->delete($truck->image);
+    }
+    $imagePath = $request->file('image')->store('trucks', 'public');
+    $data['image'] = $imagePath;
+}
+$truck->update($data);
 
         return redirect()->route('trucks.index')->with('success', 'Truck updated successfully.');
     }
