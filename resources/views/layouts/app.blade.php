@@ -14,7 +14,10 @@
             <h4 class="text-center">Menu</h4>
             <ul class="nav flex-column">
                 <li class="nav-item">
-                    <a class="nav-link text-white" href="/trucks">UNIT</a>
+                    <a class="nav-link text-white" href="/unit">Dashboard</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link text-white" href="/trucks">Trucks</a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link text-white" href="/profile">Profile</a>

@@ -7,12 +7,8 @@
         @csrf
         @method('PUT')
         <div class="form-group">
-            <label for="remind_from">Remind From</label>
-            <input type="date" name="remind_from" class="form-control" value="{{ $reminder->remind_from }}" required>
-        </div>
-        <div class="form-group">
-            <label for="remind_every">Remind Every (years)</label>
-            <input type="number" name="remind_every" class="form-control" value="{{ $reminder->remind_every }}" required>
+            <label for="deadline">Deadline</label>
+            <input type="date" name="deadline" class="form-control" value="{{ $reminder->deadline }}" required>
         </div>
         <button type="submit" class="btn btn-primary">Update Reminder</button>
     </form>

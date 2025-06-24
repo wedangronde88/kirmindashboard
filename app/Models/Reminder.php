@@ -11,9 +11,10 @@ class Reminder extends Model
     protected $fillable = [
         'truck_id',
         'document_type',
-        'remind_from',
+        'deadline',
         'remind_every',
         'google_event_id',
+        'renewed_at',
     ];
 
     public function truck()

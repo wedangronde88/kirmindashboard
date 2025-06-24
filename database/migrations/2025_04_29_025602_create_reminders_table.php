@@ -15,9 +15,9 @@ return new class extends Migration
             $table->id();
             $table->foreignId('truck_id')->constrained()->onDelete('cascade');
             $table->string('document_type');
-            $table->date('remind_from');
-            $table->integer('remind_every'); // Number of days
+            $table->date('deadline');
             $table->string('google_event_id')->nullable();
+            $table->timestamp('renewed_at')->nullable();
             $table->timestamps();
 
         });

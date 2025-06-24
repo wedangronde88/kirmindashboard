@@ -33,6 +33,8 @@ Route::resource('trucks.reminders', ReminderController::class);
 Route::resource('trucks', TruckController::class);
 Route::get('trucks/{truck}', [TruckController::class, 'show'])->name('trucks.show');
 
+Route::post('/reminders/{reminder}/renew', [ReminderController::class, 'renew']);
+
 // Profile and settings
 Route::get('/profile', function () {
     return view('profile');

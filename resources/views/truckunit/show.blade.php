@@ -5,7 +5,7 @@
     <h1>Truck Profile: {{ $truck->plat_no }}</h1>
 
     <!-- Truck Details -->
-    <div class="card mb-4">
+    <div class="card mb-4 position-relative">
         <div class="card-body">
             <h5 class="card-title">{{ $truck->brand_truk }}</h5>
             <p><strong>Plate No:</strong> {{ $truck->plat_no }}</p>
@@ -17,6 +17,60 @@
             @else
                 <p>No Image Available</p>
             @endif
+
+            {{-- Countdown for each document --}}
+           @php
+    $now = \Carbon\Carbon::now();
+    $reminders = $truck->reminders->keyBy('document_type');
+@endphp
+<div class="position-absolute bottom-0 end-0 m-3" style="z-index:10;">
+    @foreach(['STNK', 'SIM', 'KIR'] as $doc)
+        @if(isset($reminders[$doc]))
+            @php
+                $deadline = \Carbon\Carbon::parse($reminders[$doc]->deadline)->setTime(23,59,59);
+                $deadlineJs = $deadline->format('Y-m-d\TH:i:s');
+                $diff = $now->diffInDays($deadline, false);
+                $isExpired = $diff < 0;
+            @endphp
+            <div class="mb-1">
+                <span class="fw-bold">{{ $doc }}:</span>
+                @if($isExpired)
+                    <span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>
+                @else
+                    <span id="timer-detail-{{ $reminders[$doc]->id }}" class="fw-bold"></span>
+                    <script>
+                        (function() {
+                            function updateTimerDetail{{ $reminders[$doc]->id }}() {
+                                var deadline = new Date("{{ $deadlineJs }}").getTime();
+                                var now = new Date().getTime();
+                                var distance = deadline - now;
+
+                                if (distance < 0) {
+                                    document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML = '<span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>';
+                                    clearInterval(window['intervalDetail{{ $reminders[$doc]->id }}']);
+                                    return;
+                                }
+
+                                var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                                var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                                var seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                                var color = (days < 30) ? 'text-danger' : 'text-success';
+                                document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML =
+                                    '<span class="' + color + '">' +
+                                    days + ' hari ' + hours + ' jam ' + minutes + ' menit ' + seconds + ' detik' +
+                                    '</span>';
+                            }
+                            window['intervalDetail{{ $reminders[$doc]->id }}'] = setInterval(updateTimerDetail{{ $reminders[$doc]->id }}, 1000);
+                            updateTimerDetail{{ $reminders[$doc]->id }}();
+                        })();
+                    </script>
+                @endif
+            </div>
+        @endif
+    @endforeach
+</div>
         </div>
     </div>
 
@@ -109,68 +163,107 @@
             </table>
         </div>
 
-        <!-- Reminders Tab -->
-        <div class="tab-pane fade" id="reminders" role="tabpanel" aria-labelledby="reminders-tab">
+        {{-- Reminders Tab --}}
+<div class="tab-pane fade" id="reminders" role="tabpanel" aria-labelledby="reminders-tab">
     <h2 class="mt-4">Expiration Reminders</h2>
-    <a href="{{ route('trucks.reminders.create', $truck->id) }}" class="btn btn-primary mb-3">Add Reminder</a>
+    <div class="d-flex justify-content-end mb-3">
+        <a href="{{ route('trucks.reminders.create', $truck->id) }}" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add Reminder
+        </a>
+    </div>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Document Type</th>
+                <th>Deadline</th>
+                <th>Countdown</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach($truck->reminders as $reminder)
+                @php
+                    $deadline = \Carbon\Carbon::parse($reminder->deadline)->setTime(23,59,59);
+                    $deadlineJs = $deadline->format('Y-m-d\TH:i:s');
+                    $now = \Carbon\Carbon::now();
+                    $diff = $now->diffInDays($deadline, false);
+                    $isExpired = $diff < 0;
+                @endphp
+                <tr>
+                    <td>{{ $reminder->document_type }}</td>
+                    <td>{{ $deadline->format('d-m-Y') }}</td>
+                    <td>
+                        @if($isExpired)
+                            <span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>
+                        @else
+                            <span id="timer-{{ $reminder->id }}" class="fw-bold"></span>
+                            <script>
+                                (function() {
+                                    function updateTimer{{ $reminder->id }}() {
+                                        var deadline = new Date("{{ $deadlineJs }}").getTime();
+                                        var now = new Date().getTime();
+                                        var distance = deadline - now;
 
-    <!-- Calendar Container -->
-    <div id="calendar"></div>
-</div>
+                                        if (distance < 0) {
+                                            document.getElementById("timer-{{ $reminder->id }}").innerHTML = '<span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>';
+                                            clearInterval(window['interval{{ $reminder->id }}']);
+                                            return;
+                                        }
 
-<!-- FullCalendar Script -->
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var calendarEl = document.getElementById('calendar');
+                                        var days = Math.floor(distance / (1000 * 60 * 60 * 24));
+                                        var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                                        var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                                        var seconds = Math.floor((distance % (1000 * 60)) / 1000);
 
-        var calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth', // Month view
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,timeGridDay'
-            },
-            events: '/trucks/{{ $truck->id }}/reminders', // Fetch events dynamically from Laravel
-            selectable: true, // Allow date selection
-            select: function(info) {
-                // Prompt user for event details
-                var title = prompt('Enter Event Title:');
-                if (title) {
-                    // Send event data to the server
-                    fetch('/trucks/{{ $truck->id }}/reminders', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        body: JSON.stringify({
-                            title: title,
-                            start: info.startStr,
-                            end: info.endStr
-                        })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            alert('Event added successfully!');
-                            calendar.refetchEvents(); // Refresh calendar events
-                        } else {
-                            alert('Failed to add event.');
-                        }
-                    });
-                }
-                calendar.unselect(); // Clear selection
-            },
-            eventClick: function(info) {
-                alert('Event: ' + info.event.title + '\nDescription: ' + info.event.extendedProps.description);
-            }
-        });
-
-        calendar.render();
-    });
-</script>
+                                        var color = (days < 30) ? 'text-danger' : 'text-success';
+                                        document.getElementById("timer-{{ $reminder->id }}").innerHTML =
+                                            '<span class="' + color + '">' +
+                                            days + ' hari ' + hours + ' jam ' + minutes + ' menit ' + seconds + ' detik' +
+                                            '</span>';
+                                    }
+                                    window['interval{{ $reminder->id }}'] = setInterval(updateTimer{{ $reminder->id }}, 1000);
+                                    updateTimer{{ $reminder->id }}();
+                                })();
+                            </script>
+                        @endif
+                    </td>
+                    <td>
+                        <a href="{{ route('trucks.reminders.edit', [$truck->id, $reminder->id]) }}" class="btn btn-warning btn-sm mb-1">
+                            <i class="bi bi-pencil"></i> Edit
+                        </a>
+                        <form action="{{ route('trucks.reminders.destroy', [$truck->id, $reminder->id]) }}" method="POST" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this reminder?');">
+                            @csrf
+                            @method('DELETE')
+                            <button type="submit" class="btn btn-danger btn-sm mb-1">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </form>
+                        <button class="btn btn-success btn-sm" onclick="renewReminder({{ $reminder->id }})">Renewed</button>
+                    </td>
+                </tr>
+            @endforeach
         </tbody>
     </table>
+    <script>
+    function renewReminder(reminderId) {
+        if (confirm('Apakah Anda yakin ingin memperbaharui dokumen ini?')) {
+            fetch('/reminders/' + reminderId + '/renew', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success){
+                    alert('Selamat dokumen telah diperbaharui');
+                    location.reload();
+                }
+            });
+        }
+    }
+    </script>
 </div>
     </div>
 </div>
