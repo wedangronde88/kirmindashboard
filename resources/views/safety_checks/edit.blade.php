@@ -7,6 +7,10 @@
         @csrf
         @method('PUT')
         <div class="form-group">
+            <label for="trip_date">Trip Date</label>
+            <input type="date" name="trip_date" class="form-control" value="{{ old('trip_date', $safetyCheck->trip_date ?? '') }}" required>
+        </div>
+        <div class="form-group">
             <label for="pick_up_point">Pick-Up Point</label>
             <input type="text" name="pick_up_point" class="form-control" value="{{ $safetyCheck->pick_up_point }}" required>
         </div>

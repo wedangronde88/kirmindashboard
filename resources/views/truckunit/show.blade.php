@@ -6,7 +6,7 @@
 
     <!-- Truck Details -->
     <div class="card mb-4 position-relative">
-        <div class="card-body">
+        <div class="card-body" style="position:relative;">
             <h5 class="card-title">{{ $truck->brand_truk }}</h5>
             <p><strong>Plate No:</strong> {{ $truck->plat_no }}</p>
             <p><strong>No STNK:</strong> {{ $truck->no_stnk }}</p>
@@ -18,59 +18,70 @@
                 <p>No Image Available</p>
             @endif
 
-            {{-- Countdown for each document --}}
-           @php
-    $now = \Carbon\Carbon::now();
-    $reminders = $truck->reminders->keyBy('document_type');
-@endphp
-<div class="position-absolute bottom-0 end-0 m-3" style="z-index:10;">
-    @foreach(['STNK', 'SIM', 'KIR'] as $doc)
-        @if(isset($reminders[$doc]))
+            {{-- Reminders at the bottom right of the truck details card --}}
             @php
-                $deadline = \Carbon\Carbon::parse($reminders[$doc]->deadline)->setTime(23,59,59);
-                $deadlineJs = $deadline->format('Y-m-d\TH:i:s');
-                $diff = $now->diffInDays($deadline, false);
-                $isExpired = $diff < 0;
+                $now = \Carbon\Carbon::now();
+                $reminders = $truck->reminders->keyBy('document_type');
+                $reminderDocs = ['STID', 'KIR', 'STNK', 'PKB', 'Plat Nomor'];
             @endphp
-            <div class="mb-1">
-                <span class="fw-bold">{{ $doc }}:</span>
-                @if($isExpired)
-                    <span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>
-                @else
-                    <span id="timer-detail-{{ $reminders[$doc]->id }}" class="fw-bold"></span>
-                    <script>
-                        (function() {
-                            function updateTimerDetail{{ $reminders[$doc]->id }}() {
-                                var deadline = new Date("{{ $deadlineJs }}").getTime();
-                                var now = new Date().getTime();
-                                var distance = deadline - now;
-
-                                if (distance < 0) {
-                                    document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML = '<span class="text-danger">Masa dokumen telah kedaluwarsa, silahkan perbaharui</span>';
-                                    clearInterval(window['intervalDetail{{ $reminders[$doc]->id }}']);
-                                    return;
-                                }
-
-                                var days = Math.floor(distance / (1000 * 60 * 60 * 24));
-                                var hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                                var minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                                var seconds = Math.floor((distance % (1000 * 60)) / 1000);
-
-                                var color = (days < 30) ? 'text-danger' : 'text-success';
-                                document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML =
-                                    '<span class="' + color + '">' +
-                                    days + ' hari ' + hours + ' jam ' + minutes + ' menit ' + seconds + ' detik' +
-                                    '</span>';
-                            }
-                            window['intervalDetail{{ $reminders[$doc]->id }}'] = setInterval(updateTimerDetail{{ $reminders[$doc]->id }}, 1000);
-                            updateTimerDetail{{ $reminders[$doc]->id }}();
-                        })();
-                    </script>
-                @endif
+            <div class="position-absolute" style="right: 20px; bottom: 20px; background:rgba(255,255,255,0.95); border-radius:8px; padding:10px 16px; min-width:180px; box-shadow:0 2px 8px rgba(0,0,0,0.08); z-index:10;">
+                <div class="fw-bold mb-1" style="font-size:13px;">Reminders</div>
+                @foreach($reminderDocs as $doc)
+                    @if(isset($reminders[$doc]))
+                        @php
+                            $deadline = \Carbon\Carbon::parse($reminders[$doc]->deadline)->setTime(23,59,59);
+                            $deadlineJs = $deadline->format('Y-m-d\TH:i:s');
+                            $diff = $now->diffInDays($deadline, false);
+                            $isExpired = $diff < 0;
+                        @endphp
+                        <div style="font-size:12px;" class="mb-1">
+                            <span class="fw-bold">{{ $doc }}:</span>
+                            @if($isExpired)
+                                <span class="text-danger">Expired</span>
+                            @else
+                                <span id="timer-detail-{{ $reminders[$doc]->id }}" class="fw-bold"></span>
+                                <script>
+                                    (function() {
+                                        function updateTimerDetail{{ $reminders[$doc]->id }}() {
+                                            var deadline = new Date("{{ $deadlineJs }}").getTime();
+                                            var now = new Date().getTime();
+                                            var distance = deadline - now;
+                                            if (distance < 0) {
+                                                document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML = '<span class="text-danger">Expired</span>';
+                                                clearInterval(window['intervalDetail{{ $reminders[$doc]->id }}']);
+                                                return;
+                                            }
+                                            var totalSeconds = Math.floor(distance / 1000);
+                                            var years = Math.floor(totalSeconds / (365*24*60*60));
+                                            totalSeconds -= years * 365*24*60*60;
+                                            var months = Math.floor(totalSeconds / (30*24*60*60));
+                                            totalSeconds -= months * 30*24*60*60;
+                                            var days = Math.floor(totalSeconds / (24*60*60));
+                                            totalSeconds -= days * 24*60*60;
+                                            var hours = Math.floor(totalSeconds / (60*60));
+                                            totalSeconds -= hours * 60*60;
+                                            var minutes = Math.floor(totalSeconds / 60);
+                                            var seconds = totalSeconds % 60;
+                                            var color = (years === 0 && months === 0 && days < 30) ? 'text-danger' : 'text-success';
+                                            document.getElementById("timer-detail-{{ $reminders[$doc]->id }}").innerHTML =
+                                                '<span class="' + color + '">' +
+                                                years + 'Y ' +
+                                                months + 'M ' +
+                                                days + 'D ' +
+                                                hours + 'H ' +
+                                                minutes + 'm ' +
+                                                seconds + 's' +
+                                                '</span>';
+                                        }
+                                        window['intervalDetail{{ $reminders[$doc]->id }}'] = setInterval(updateTimerDetail{{ $reminders[$doc]->id }}, 1000);
+                                        updateTimerDetail{{ $reminders[$doc]->id }}();
+                                    })();
+                                </script>
+                            @endif
+                        </div>
+                    @endif
+                @endforeach
             </div>
-        @endif
-    @endforeach
-</div>
         </div>
     </div>
 
@@ -133,6 +144,7 @@
             <table class="table table-bordered">
                 <thead>
                     <tr>
+                        <th>Trip Date</th>
                         <th>Pick-Up Point</th>
                         <th>Destination</th>
                         <th>PDF File</th>
@@ -142,6 +154,7 @@
                 <tbody>
                     @forelse ($truck->safetyChecks as $check)
                         <tr>
+                            <td>{{ $check->trip_date }}</td>
                             <td>{{ $check->pick_up_point }}</td>
                             <td>{{ $check->destination }}</td>
                             <td><a href="{{ asset('storage/' . $check->pdf_file) }}" target="_blank">View PDF</a></td>
@@ -156,7 +169,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="text-center">No safety checks found.</td>
+                            <td colspan="5" class="text-center">No safety checks found.</td>
                         </tr>
                     @endforelse
                 </tbody>

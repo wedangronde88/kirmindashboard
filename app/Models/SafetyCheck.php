@@ -12,6 +12,7 @@ class SafetyCheck extends Model
         'truck_id',
         'pick_up_point',
         'destination',
+        'trip_date',
         'pdf_file',
     ];
 

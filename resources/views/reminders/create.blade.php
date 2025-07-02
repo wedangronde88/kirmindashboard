@@ -8,7 +8,7 @@
         <div class="form-group">
             <label for="document_type">Document Type</label>
             <select name="document_type" class="form-control" required>
-                @foreach($availableTypes as $type)
+                @foreach(['STID', 'KIR', 'STNK', 'PKB', 'Plat Nomor'] as $type)
                     <option value="{{ $type }}">{{ $type }}</option>
                 @endforeach
             </select>

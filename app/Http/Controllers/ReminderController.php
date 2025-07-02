@@ -1,130 +1,111 @@
 <?php
-
 namespace App\Http\Controllers;
 
-use App\Models\Reminder;
 use App\Models\Truck;
+use App\Models\Reminder;
 use Illuminate\Http\Request;
-use Spatie\GoogleCalendar\Event;
 use Carbon\Carbon;
 
 class ReminderController extends Controller
 {
-    public function index(Truck $truck)
+    // Show create reminder form
+    public function create(Truck $truck)
     {
-        $reminders = $truck->reminders;
-        return view('reminders.index', compact('reminders', 'truck'));
+        $allTypes = ['STID', 'KIR', 'STNK', 'PKB', 'Plat Nomor'];
+        $usedTypes = $truck->reminders->pluck('document_type')->toArray();
+        $availableTypes = array_diff($allTypes, $usedTypes);
+
+        return view('reminders.create', compact('truck', 'availableTypes'));
     }
 
-    public function create(Truck $truck)
-{
-    $allTypes = ['SIM', 'STNK', 'KIR'];
-    $usedTypes = $truck->reminders->pluck('document_type')->toArray();
-    $availableTypes = array_diff($allTypes, $usedTypes);
-
-    return view('reminders.create', compact('truck', 'availableTypes'));
-}
-
+    // Store new reminder
     public function store(Request $request, Truck $truck)
     {
         $request->validate([
-            'document_type' => 'required|string|in:STNK,SIM,KIR',
+            'document_type' => 'required|string|in:STID,KIR,STNK,PKB,Plat Nomor',
             'deadline' => 'required|date',
         ]);
 
-        // Only one reminder per document per truck
         $reminder = $truck->reminders()->firstOrNew([
             'document_type' => $request->document_type,
         ]);
-
         $reminder->deadline = $request->deadline;
-
-        // Google Calendar event
-        if ($reminder->google_event_id) {
-            // Update existing event
-            $event = Event::find($reminder->google_event_id);
-            if ($event) {
-                $event->name = "{$request->document_type} Reminder for Truck {$truck->plat_no}";
-                $event->startDate = Carbon::parse($request->deadline);
-                $event->endDate = Carbon::parse($request->deadline);
-                $event->save();
-            }
-        } else {
-            // Create new event
-            $event = new Event();
-            $event->name = "{$request->document_type} Reminder for Truck {$truck->plat_no}";
-            $event->startDate = Carbon::parse($request->deadline);
-            $event->endDate = Carbon::parse($request->deadline);
-            $googleEvent = $event->save();
-            $reminder->google_event_id = $googleEvent->id;
-        }
-
         $reminder->save();
 
-        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder saved and synced with Google Calendar.');
+        // Optionally: Sync with Google Calendar here
+
+        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder saved.');
     }
 
+    // Show edit form
     public function edit(Truck $truck, Reminder $reminder)
     {
-        return view('reminders.edit', compact('truck', 'reminder'));
+        $allTypes = ['STID', 'KIR', 'STNK', 'PKB', 'Plat Nomor'];
+        return view('reminders.edit', compact('truck', 'reminder', 'allTypes'));
     }
 
+    // Update reminder
     public function update(Request $request, Truck $truck, Reminder $reminder)
     {
         $request->validate([
+            'document_type' => 'required|string|in:STID,KIR,STNK,PKB,Plat Nomor',
             'deadline' => 'required|date',
         ]);
 
+        $reminder->document_type = $request->document_type;
         $reminder->deadline = $request->deadline;
         $reminder->save();
 
-        // Update Google Calendar Event
-        if ($reminder->google_event_id) {
-            $event = Event::find($reminder->google_event_id);
-            if ($event) {
-                $event->name = "{$reminder->document_type} Reminder for Truck {$truck->plat_no}";
-                $event->startDate = Carbon::parse($request->deadline);
-                $event->endDate = Carbon::parse($request->deadline);
-                $event->save();
-            }
-        }
+        // Optionally: Sync with Google Calendar here
 
-        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder updated and synced with Google Calendar.');
+        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder updated.');
     }
 
+    // Delete reminder
     public function destroy(Truck $truck, Reminder $reminder)
     {
-        // Delete Google Calendar Event
-        if ($reminder->google_event_id) {
-            $event = Event::find($reminder->google_event_id);
-            if ($event) {
-                $event->delete();
-            }
-        }
-
         $reminder->delete();
-
-        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder deleted and removed from Google Calendar.');
+        return redirect()->route('trucks.show', $truck->id)->with('success', 'Reminder deleted.');
     }
 
-    // Add this method for AJAX renewal
+    // Renew reminder (AJAX)
     public function renew(Reminder $reminder)
     {
-        $newDeadline = Carbon::now()->addYears(5);
+        $now = Carbon::now();
+        switch ($reminder->document_type) {
+            case 'STID':
+                $newDeadline = $now->addYears(2);
+                break;
+            case 'KIR':
+                $newDeadline = $now->addMonths(6);
+                break;
+            case 'STNK':
+            case 'PKB':
+            case 'Plat Nomor':
+                $newDeadline = $now->addYears(5);
+                break;
+            default:
+                $newDeadline = $now;
+        }
         $reminder->deadline = $newDeadline;
         $reminder->renewed_at = now();
         $reminder->save();
 
-        // Update Google Calendar event
-        if ($reminder->google_event_id) {
-            $event = Event::find($reminder->google_event_id);
-            if ($event) {
-                $event->startDate = $newDeadline;
-                $event->endDate = $newDeadline;
-                $event->save();
-            }
-        }
+        // Optionally: Sync with Google Calendar here
 
         return response()->json(['success' => true]);
+    }
+
+    // API for FullCalendar events
+    public function events(Truck $truck)
+    {
+        $reminders = $truck->reminders()->get()->map(function ($reminder) {
+            return [
+                'title' => $reminder->document_type,
+                'start' => $reminder->deadline,
+                'description' => 'Deadline for ' . $reminder->document_type,
+            ];
+        });
+        return response()->json($reminders);
     }
 }
